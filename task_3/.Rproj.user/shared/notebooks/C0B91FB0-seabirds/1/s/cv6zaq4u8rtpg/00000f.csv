@@ -1,0 +1,5 @@
+"0","birds %>%"
+"0","  filter(str_detect(common_name, ""penguin|Penguin"")) %>%"
+"0","  summarise("
+"0","    sum(count, na.rm = TRUE)"
+"0","  )"
