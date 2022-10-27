@@ -10,13 +10,14 @@ library(janitor)
 library(readxl)
 library(here)
 ```
+
 ```{r}
 #loading the data
-candy_2015 <- read_excel(here("../raw_data/boing-boing-candy-2015.xlsx")) %>% 
+candy_2015 <- read_excel("../raw_data/boing-boing-candy-2015.xlsx") %>% 
   clean_names()
-candy_2016 <- read_excel(here("../raw_data/boing-boing-candy-2016.xlsx")) %>% 
+candy_2016 <- read_excel("../raw_data/boing-boing-candy-2016.xlsx") %>% 
   clean_names()
-candy_2017 <- read_excel(here("../raw_data/boing-boing-candy-2017.xlsx")) %>% 
+candy_2017 <- read_excel("../raw_data/boing-boing-candy-2017.xlsx") %>% 
   clean_names()
 ```
 
@@ -34,8 +35,8 @@ candy_2017
 # Investigate other columns
 
 
-#keeping variables useful for analysis from 2015 dataset
-#The variables are a bit confusing. I will only keep only variables that are actual food and drop anything which is not food.  
+#only keeping variables useful for analysis from 2015 dataset
+#The variables are a bit confusing. I will only keep variables that are actual food and drop anything which is not food.  
 ```{r}
 candy_2015 <- candy_2015 %>% 
   select(-c(
@@ -94,5 +95,161 @@ candy_2016 <- candy_2016 %>%
          )
 candy_2016
 ```
-#sorting the country column 
+#candy 2017
+
+```{r}
+candy_2017 <- candy_2017 %>% 
+  select(-c(q7_joy_other : click_coordinates_x_y))
+candy_2017
+```
+#clean column: removing the q+numnber_ before variable name 
+
+```{r}
+candy_2017 <- candy_2017 %>% 
+  rename_with(~ str_remove(., pattern = "q[0-90-9]+_"))
+candy_2017
+```
+
+#pivot longer all the datasets
+```{r}
+library(tidyr)
+```
+```{r}
+#2015
+candy_2015 <- candy_2015 %>% 
+  pivot_longer("butterfinger":"york_peppermint_patties",
+names_to = "candy_type", 
+values_to = "rating")
+candy_2015
+```
+```{r}
+#2016
+candy_2016 <- candy_2016 %>% 
+  pivot_longer("grand_bar":"york_peppermint_patties",
+names_to = "candy_type", 
+values_to = "rating")
+candy_2016
+```
+
+
+```{r}
+#2017
+candy_2017 <- candy_2017 %>% 
+  pivot_longer("100_grand_bar":"york_peppermint_patties",
+names_to = "candy_type", 
+values_to = "rating")
+candy_2017
+```
+```{r}
+#binding all the datasets
+bind_rows(candy_2015, 
+          candy_2016, 
+          candy_2017, 
+          .id = "year")
+```
+
+
+#sort out age column and country column 
+
+```{r}
+#binding rows, so making sure all the variable have the same name 
+candy_2015 <- candy_2015 %>% 
+  rename(age = "how_old_are_you")
+candy_2015
+candy_2017 <- candy_2017 %>% 
+  rename(trick_or_treat = "going_out")
+candy_2017
+```
+
+```{r}
+#binding the 3 datasets
+candy <- bind_rows(candy_2015, 
+                            candy_2016, 
+                            candy_2017, 
+                   .id = id)
+candy
+```
+
+#let's clean once again candy_type 
+```{r}
+candy <- candy %>% 
+  mutate(candy_type = recode(candy_type,
+                              "anonymous_brown_globs_that_come_in_black_and_orange_wrappers_a_k_a_mary_janes" = "mary_janes"),
+  candy_type = recode(candy_type,"bonkers_the_candy" = "bonkers"),
+  candy_type = recode(candy_type,"boxo_raisins" = "box_o_raisins"),
+  candy_type = recode(candy_type,"licorice_yes_black" = "licorice"),
+  candy_type = recode(candy_type,"sweetums_a_friend_to_diabetes" = "sweetums"))
+  candy
+```
+#country column
+
+```{r}
+candy <- candy %>% 
+  mutate(country = if_else(grepl("(?i)usa+", country),"USA",country)) %>% 
+  mutate(country = if_else(grepl("(?i)united s+", country),"USA",country)) %>% 
+  mutate(country = if_else(grepl("(?i)amer", country),"USA",country)) %>% 
+  mutate(country = if_else(grepl("(?i)stat", country),"USA",country)) %>% 
+  mutate(country = if_else(grepl("(?i)subscribe+.*", country),NA_character_,country)) 
+
+#make vectors of USA outliers and some to change to NA values
+usa_outliers = c("Alaska", "California", "EUA", "Merica", "Murica", "murrika",
+                 "New Jersey", "New York", "North Carolina", "Pittsburgh", 
+                 "The Yoo Ess of Aaayyyyyy", "Trumpistan", "U S", "u s a", "u.s.",
+                 "U.s.", "U.S.", "u.s.a.", "U.S.A.", "UD", "us", "Us", "US", "US of A",
+                 "USSA", "'merica")
+change_to_NA = c(1, 30.0, 32, 35, 44.0, 45, 45.0, 46, 47.0, 51.0, 54.0)
+change_to_NA2 = c("30.0", "44.0", "45.0", "47.0", "51.0", "54.0")
+others = c(
+  "A tropical island south of the equator", "A", "Atlantis",
+  "Canae", "cascadia ", "Cascadia", "Denial", "Earth", "Fear and Loathing", 
+  "god's country", "I don't know anymore", "insanity lately", 
+  "there isn't one for old men", "soviet canuckistan", "Narnia", "Neverland",
+  "one of the best ones", "See above", "Somewhere", 
+  "Subscribe To Dm4uz3 On Youtube", "The republic of Cascadia", "this one", 
+  "Europe", " Cascadia", "Cascadia ")
+candy
+```
+
+```{r}
+candy <- candy %>%
+mutate(country = if_else(country %in% usa_outliers ,
+                         "USA", country)) %>% 
+  mutate(country = if_else(country %in% others|
+                             country %in% change_to_NA|
+                             country %in% change_to_NA2, 
+                           NA_character_, country)) %>% 
+  mutate(country = str_to_title(country)) 
+candy
+```
+```{r}
+candy <- candy %>%
+mutate(country = recode(country, "The Netherlands" = "Netherlands"),
+       country = recode(country, "Can" = "Canada"),
+       country = recode(country, "Canada`" = "Canada"),
+       country = recode(country, "Endland" = "United Kingdom"),
+       country = recode(country, "England" = "United Kingdom"),
+       country = recode(country, "England" = "United Kingdom"),
+       country = recode(country, "Scotland" = "United Kingdom"),
+       country = recode(country, "España" = "Spain"),
+       country = recode(country, "U.k." = "United Kingdom"),
+       country = recode(country, "Uk" = "United Kingdom"),
+       country = recode(country, "United Kindom" = "United Kingdom"))
+candy
+```
+#age column
+
+```{r}
+candy <- candy %>% 
+  mutate(age = as.numeric(age)) %>% 
+  count(age) %>% 
+  mutate(age = ifelse(age>122, NA, age))
+candy
+```
+
+#write data to CSV
+
+```{r}
+candy %>% 
+  write_csv("../clean_data/candy_clean.csv")
+```
 
