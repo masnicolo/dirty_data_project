@@ -1,0 +1,129 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Answering the following business questions 
+
+# What is the total number of candy ratings given across the three years. (Number of candy ratings, not the number of raters. Don’t count missing values)
+# What was the average age of people who are going out trick or treating?
+# What was the average age of people who are not going trick or treating?
+# For each of joy, despair and meh, which candy bar received the most of these ratings?
+# How many people rated Starburst as despair?
+
+```{r}
+#loading necessary packages
+library(tidyverse)
+```
+
+```{r}
+#loading the clean data
+candy_clean <- read_csv("../clean_data/candy_clean.csv")
+candy_clean
+```
+
+```{r}
+# What is the total number of candy ratings given across the three years. (Number of candy ratings, not the number of raters. Don’t count missing values)
+candy_clean %>% 
+  drop_na(rating) %>% 
+  count(rating)
+```
+# The number of ratings across the three years is 339497 (DESPAIR), 293891 (JOY), 88518 (MEH)
+
+
+```{r}
+#What was the average age of people who are going out trick or treating?
+candy_clean %>% 
+  filter(trick_or_treat == "Yes") %>% 
+  drop_na(age) %>% 
+  summarise(mean_age = mean(age, na.rm = TRUE))
+```
+
+# The mean age of people going trick or treating is 35 years old 
+
+```{r}
+#What was the average age of people who are not going trick or treating?
+candy_clean %>% 
+  filter(trick_or_treat == "No") %>% 
+  drop_na(age) %>% 
+  summarise(mean_age = mean(age, na.rm = TRUE))
+```
+# The mean age of people not going trick or treating is 39 years old 
+
+
+```{r}
+#For each of joy, despair and meh, which candy bar received the most of these ratings?
+candy_clean %>% 
+  filter(rating == "JOY") %>% 
+  count(candy_type) %>%
+  arrange(n)
+```
+# Reese peanut butter cups is the candy with most joy ratings 
+
+```{r}
+#For each of joy, despair and meh, which candy bar received the most of these ratings?
+candy_clean %>% 
+  filter(rating == "MEH") %>% 
+  count(candy_type) %>%
+  arrange(n)
+```
+
+# Lollipops is the candy with most meh ratings
+
+```{r}
+#For each of joy, despair and meh, which candy bar received the most of these ratings?
+candy_clean %>% 
+  filter(rating == "DESPAIR") %>% 
+  count(candy_type) %>%
+  arrange(n)
+```
+# Broken glow sticks is the candy with most despair ratings
+
+
+
+```{r}
+#How many people rated Starburst as despair?
+candy_clean %>% 
+  group_by(candy_type, rating) %>% 
+  filter(candy_type == "starburst", 
+         rating == "DESPAIR") %>% 
+  count(rating)
+```
+
+# 1990 people rated starburst as despair
+
+> For the next three questions, count despair as -1, joy as +1, meh as 0
+
+# What was the most popular candy bar by this rating system for each gender in the dataset ?
+# What was the most popular candy bar in each year?
+# What was the most popular candy bar by this rating for people in US, Canada, UK, and all other countries?
+
+```{r}
+candy_clean <- candy_clean %>% 
+ mutate(candy_rating = case_when (rating == "DESPAIR" ~ -1,
+                                              rating == "JOY" ~ 1,
+                                              TRUE ~ 0))
+candy_clean
+```
+```{r}
+candy_clean %>% 
+  count(candy_rating)
+```
+
+```{r}
+#What was the most popular candy bar by this rating system for each gender in the dataset ?
+candy_clean %>% 
+filter(gender == "Male") %>% 
+  count(rating)
+```
+```{r}
+candy_clean %>% 
+  filter(gender == "male") %>% 
+  group_by(rating) %>% 
+  summarise(new_rating_total = sum(rating)) %>% 
+  arrange(desc(new_rating_total)) %>% 
+  slice_head(n=1)
+```
+
+
+
