@@ -99,31 +99,47 @@ candy_clean %>%
 # What was the most popular candy bar by this rating for people in US, Canada, UK, and all other countries?
 
 ```{r}
-candy_clean <- candy_clean %>% 
- mutate(candy_rating = case_when (rating == "DESPAIR" ~ -1,
-                                              rating == "JOY" ~ 1,
-                                              TRUE ~ 0))
-candy_clean
-```
-```{r}
-candy_clean %>% 
-  count(candy_rating)
+# add column to dataset with scores for each rating
+candy_scored <- candy_clean %>% 
+  mutate(score = case_when(
+    rating == "JOY" ~ 1,
+    rating == "DESPAIR" ~ -1,
+    TRUE ~ 0
+  ))
+
 ```
 
 ```{r}
 #What was the most popular candy bar by this rating system for each gender in the dataset ?
-candy_clean %>% 
-filter(gender == "Male") %>% 
-  count(rating)
+candy_scored %>% 
+  filter(!is.na(gender)) %>% 
+group_by(gender, candy_type) %>% 
+  summarise(total_score = sum(score)) %>% 
+  slice_max(total_score)
 ```
+
+#All respondents rated any full sized candy bar as the most popular 
+
+
 ```{r}
-candy_clean %>% 
-  filter(gender == "male") %>% 
-  group_by(rating) %>% 
-  summarise(new_rating_total = sum(rating)) %>% 
-  arrange(desc(new_rating_total)) %>% 
-  slice_head(n=1)
+# What was the most popular candy bar in each year?
+candy_scored %>% 
+  group_by(timestamp, candy_type) %>% 
+  summarise(total_score = sum(score)) %>% 
+  slice_max(total_score)
 ```
 
+#The most popular candy in 2015 and 2017 was Reese's Peanut Butter Cups, in 2016 the most popular candy was Kit Kat.
 
-
+```{r}
+# What was the most popular candy bar by this rating for people in US, Canada, UK, and all other countries?
+candy_scored %>%
+  filter(!is.na(country)) %>% 
+  group_by(country, candy_type) %>% 
+  summarise(total_score = sum(score),
+            num_votes = n()) %>%
+  arrange(desc(total_score), num_votes) %>%
+  slice_max(total_score, with_ties = F) %>% 
+  select(country, candy_type)
+```
+#The most popular candy in the USA, UK AND Canada is "Any full sized candy bar". 
